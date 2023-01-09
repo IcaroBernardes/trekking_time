@@ -1,0 +1,378 @@
+---
+format: html
+---
+
+<!-- Connects to the css stylesheet of the Bootstrap package -->
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+</head>
+
+<!-- Connects to the css stylesheet of the Selectize package -->
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/css/selectize.default.min.css" integrity="sha512-pTaEn+6gF1IeWv3W1+7X7eM60TFu/agjgoHmYhAfLEU8Phuf6JKiiE8YmsNC0aCgQv4192s4Vai8YZ6VNM6vyQ==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+</head>
+
+<!-- Connects to the custom css stylesheet -->
+<head>
+<link href="www/styles.css" rel="stylesheet">
+</head>
+
+<!-- Connects to the jQuery package -->
+<script src="https://code.jquery.com/jquery-3.6.1.js" integrity="sha256-3zlB5s2uwoUzrXK3BT7AX3FyvojsraNFxCc2vC/7pNI=" crossorigin="anonymous"></script>
+
+<!-- Connects to the selectize package -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.15.2/js/selectize.min.js" integrity="sha512-IOebNkvA/HZjMM7MxL0NYeLYEalloZ8ckak+NDtOViP7oiYzG5vn6WVXyrJDiJPhl4yRdmNAG49iuLmhkUdVsQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<!-- Removes the classes of the 'div#quarto-content' -->
+<script>
+$(document).ready(function(){
+    $( "#quarto-content" ).removeClass();
+});
+</script>
+
+```{r setup, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE}
+
+# Loads libraries
+library(dplyr)
+library(glue)
+library(htmltools)
+library(purrr)
+library(stringi)
+library(stringr)
+library(trekcolors)
+
+# Sets default behaviour of chunks
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE,
+                      error = FALSE, message = FALSE)
+
+# Loads the database
+timeline <- readRDS("data/timeline.RDS")
+titles_img <- readRDS("data/titles_img.RDS")
+
+# Adds the path to the thumbnails and full images
+titles_img <- titles_img %>% 
+  dplyr::mutate(thumb = glue::glue("www/cropped/{img}"),
+                img = glue::glue("www/images/{img}"))
+
+# Gets the color palette
+palette <- trekcolors::lcars_pal("2369")
+
+#C:/Users/Icaro Bernardes/AppData/Local/R/win-library/4.2/trekfont/fonts
+
+```
+
+```{r inputs}
+
+# Creates the HTML of the control panel decoration using svg elements
+control_panel_decor <- glue::glue('
+<svg class="decor">
+    <rect width="10%" height="30%" style="fill: {palette[3]};"></rect>
+    <rect width="10%" height="55%" x="0" y="35%" style="fill: {palette[2]};"></rect>
+    <ellipse cx="10%" cy="90%" rx="10%" ry="10%" style="fill: {palette[2]};"></ellipse>
+    <rect width="68%" height="20%" x="10%" y="80%" style="fill: {palette[2]};"></rect>
+    <rect width="15%" height="20%" x="79%" y="80%" style="fill: {palette[3]};"></rect>
+    <rect width="5%" height="20%" x="95%" y="80%" style="fill: {palette[4]};"></rect>
+</svg>')
+
+# Creates the HTML of the page title
+title_page <- "<h1 id='title-page'>Trekking Time</h1>"
+
+# Creates the HTML of the page subtitle
+subtitle_page <- glue::glue("<h1 id='subtitle-page'>Star Trek is a science fiction universe that goes far beyond the original TV series. Thus, it may be confusing to navigate such vast space without any guide. This webapp provides a item-based timeline of the events of the universe. This list reflects the understanding of the editors of the <a href='https://memory-alpha.fandom.com/wiki/' target='_blank'>Memory Alpha</a> website with minimal inference.<br><br>Use the filters bellow to show only a subset of the items' thumbnails. <span style='color:{palette[7]};'>Hover</span> the mouse or <span style='color:{palette[7]};'>touch</span> the thumbnails to see <span style='color:{palette[7]};'>details.</span> Click or long-press to go to the Memory Alpha article on the item (if available).</h1>")
+
+# Creates the HTML of the titles search
+text_title <- '<input class="form-control" type="text" placeholder="Type part of a title and hit \'Enter\' to search">'
+
+# Gets a list of unique eras of the novels
+unique_eras <- timeline %>% 
+  dplyr::arrange(era) %>% 
+  dplyr::distinct(era) %>% 
+  dplyr::mutate(id = glue::glue('check-era{1:n()}'),
+                value = glue::glue('era{1:n()}'))
+
+# Creates the HTML of the eras checkboxes
+checkbox_eras <- unique_eras %>% 
+  purrr::pmap_chr(function (era, id, value) {
+    
+    glue::glue('
+               <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" value="{value}" id="{id}" checked>
+                  <label class="form-check-label" for="{id}">{era}</label>
+               </div>
+               ')
+    
+  })
+checkbox_eras <- glue::glue_collapse(checkbox_eras, sep = "\n")
+
+# Gets a list of unique series of the novels
+unique_series <- timeline %>% 
+  dplyr::arrange(series) %>% 
+  dplyr::distinct(series, series_name) %>% 
+  dplyr::mutate(value = glue::glue('series{1:n()}')) %>% 
+  dplyr::select(value, series_name)
+
+# Creates the HTML of the series dropdown menu (using Selectize)
+menu_series <- glue::glue('<select id="select-series" placeholder="Select one or more series"></select>')
+
+# Creates a list of items for the dropdown menu (using Selectize)
+item_series <- glue::glue('"{unique_series$value}"')
+item_series <- glue::glue_collapse(item_series, sep = ",")
+
+# Creates the JS of the series dropdown menu (using Selectize)
+dropdown_series <- unique_series %>% 
+  purrr::pmap_chr(function (value, series_name) {
+    
+    glue::glue('{id: "@{value}@", name: "@{series_name}@"}',
+               .open = "@{", .close = "}@")
+    
+  })
+dropdown_series <- glue::glue_collapse(dropdown_series, sep = ",\n")
+dropdown_series <- glue::glue("
+                              <script>
+                              var $select = $('#select-series').selectize({
+                                plugins: ['remove_button', 'clear_button', 'auto_position'],
+                                delimiter: ',',
+                                maxItems: null,
+                                valueField: 'id',
+                                labelField: 'name',
+                                searchField: 'name',
+                                options: [@{dropdown_series}@],
+                                items: [@{item_series}@],
+                                create: false
+                              });
+                              </script>
+                              ", .open = "@{", .close = "}@")
+
+# Gets a list of unique formats of the novels
+unique_formats <- timeline %>% 
+  dplyr::arrange(format) %>% 
+  dplyr::distinct(format) %>% 
+  dplyr::mutate(id = glue::glue('check-format{1:n()}'),
+                value = glue::glue('format{1:n()}'))
+
+# Creates the HTML of the formats checkboxes
+checkbox_formats <- unique_formats %>% 
+  purrr::pmap_chr(function (format, id, value) {
+    
+    glue::glue('
+               <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" value="{value}" id="{id}" checked>
+                  <label class="form-check-label" for="{id}">{format}</label>
+               </div>
+               ')
+    
+  })
+checkbox_formats <- glue::glue_collapse(checkbox_formats, sep = "\n")
+
+# Gets a list of unique settings of the novels
+unique_settings <- timeline %>% 
+  dplyr::arrange(setting) %>% 
+  dplyr::distinct(setting) %>% 
+  dplyr::mutate(id = glue::glue('check-setting{1:n()}'),
+                value = glue::glue('setting{1:n()}'))
+
+# Creates the HTML of the settings checkboxes
+checkbox_settings <- unique_settings %>% 
+  purrr::pmap_chr(function (setting, id, value) {
+    
+    glue::glue('
+               <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" value="{value}" id="{id}" checked>
+                  <label class="form-check-label" for="{id}">{setting}</label>
+               </div>
+               ')
+    
+  })
+checkbox_settings <- glue::glue_collapse(checkbox_settings, sep = "\n")
+
+# Creates the HTML of the container of all inputs
+control_panel_inputs <- glue::glue('<div id="control-panel-inputs" class="ui-container">
+                                      {title_page}
+                                      {subtitle_page}
+                                      <h2 class="input-label">Title:</h2>
+                                      {text_title}
+                                      <h2 class="input-label">Era:</h2>
+                                      {checkbox_eras}
+                                      <h2 class="input-label">Series:</h2>
+                                      {menu_series}
+                                      <h2 class="input-label">Format:</h2>
+                                      {checkbox_formats}
+                                      <h2 class="input-label">Setting:</h2>
+                                      {checkbox_settings}
+                                   </div>')
+
+# Creates the HTML of the control panel
+control_panel <- glue::glue('<div class="ui-wrapper">
+                                <div class="ui-itens">{control_panel_decor}</div>
+                                <div class="ui-itens">{control_panel_inputs}</div>
+                            </div>')
+
+# Marks the text as HTML
+htmltools::HTML(control_panel)
+htmltools::HTML(dropdown_series)
+
+```
+
+<!-- Creates a div to just create a margin between input and ouput sections -->
+<div id="gap"></div>
+
+```{r output}
+
+# Creates the HTML of the control panel decoration using svg elements
+cards_screen_decor <- glue::glue('
+<svg class="decor">
+    <rect width="10%" height="39%" x="0" y="61%" style="fill: {palette[6]};"></rect>
+    <rect width="10%" height="55%" x="0" y="4%" style="fill: {palette[5]};"></rect>
+    <ellipse cx="10%" cy="4%" rx="10%" ry="4%" style="fill: {palette[5]};"></ellipse>
+    <rect width="68%" height="4%" x="10%" y="0%" style="fill: {palette[5]};"></rect>
+    <rect width="15%" height="4%" x="79%" y="0%" style="fill: {palette[3]};"></rect>
+    <rect width="5%" height="4%" x="95%" y="0%" style="fill: {palette[7]};"></rect>
+</svg>')
+
+cards_itens <- timeline %>% 
+  dplyr::left_join(titles_img) %>% 
+  dplyr::select(title, thumb, img, url, era, format, setting, series, series_name, section, year) %>% 
+  dplyr::mutate(across(.cols = c("era","format","setting","series"),
+                       .fns = as.numeric,
+                       .names = "{.col}_value")) %>% 
+  dplyr::mutate(era_value = glue::glue('era{era_value}'),
+                format_value = glue::glue('format{format_value}'),
+                setting_value = glue::glue('setting{setting_value}'),
+                series_value = glue::glue('series{series_value}')) %>% 
+  slice(c(1:50,100,1000,2000,2100,2120)) %>% 
+  dplyr::mutate(id = glue::glue("card{1:n()}"))
+
+cards_tips_creator <- cards_itens %>% 
+  dplyr::mutate(year = format(year, scientific = FALSE, big.mark = " ")) %>% 
+  dplyr::select(id, img, title, era, year, series_name, format, setting) %>% 
+  purrr::pmap_chr(function (id, img, title, era, year, series_name, format, setting) {
+    
+    glue::glue('
+      $("#@{id}@").tooltip({
+        animated: "fade",
+        html: true,
+        title: $("<div>")
+          .html("<div class=\'tip-container\'>      <img src=\'@{img}@\' class=\'tip-img\'>      <div class=\'tip-text\'>      <div class=\'tip-head\'>Title:</div><div class=\'tip-content\'>@{title}@</div>      <div class=\'tip-head\'>Era:</div><div>@{era}@</div>      <div class=\'tip-head tip-year\'>Year:</div><div class=\'tip-content tip-year\'>@{year}@</div>      <div class=\'tip-head\'>Series:</div><div class=\'tip-content\'>@{series_name}@</div>      <div class=\'tip-head\'>Format:</div><div>@{format}@</div>      <div class=\'tip-head\'>Setting:</div><div>@{setting}@</div>      </div></div>")
+      });
+      ', .open = "@{", .close = "}@")
+    
+  })
+cards_tips_creator <- glue::glue_collapse(cards_tips_creator, sep = "\n")
+cards_tips_creator <- glue::glue('
+                                 <script>
+                                 $(document).ready(function(){
+                                    @{cards_tips_creator}@
+                                 });
+                                 </script>
+                                 ', .open = "@{", .close = "}@")
+
+cards_itens <- cards_itens %>% 
+  dplyr::mutate(url = ifelse(is.na(url), "#", url),
+                title = stringi::stri_trans_general(title, "latin-ascii; lower"),
+                title = stringr::str_remove_all(title, "[:punct:]")) %>% 
+  dplyr::select(id, thumb, url, title, era_value, format_value, setting_value, series_value) %>% 
+  purrr::pmap_chr(function (id, thumb, url, title,
+                            era_value, format_value, setting_value, series_value) {
+    
+    glue::glue('
+               <div class="card-item {era_value} {format_value} {setting_value} {series_value}" title=\'{title}\'>
+                  <a href="{url}">
+                    <img id="{id}" src="{thumb}" alt="..." class="thumb">
+                  </a>
+               </div>
+               ')
+    
+  })
+
+cards_itens <- glue::glue_collapse(cards_itens, sep = "\n")
+cards_screen_outputs <- glue::glue('
+                           <div id="cards-container" class="ui-container row">{cards_itens}</div>
+                           ')
+
+# Creates the HTML of the control panel
+cards_screen <- glue::glue('<div class="ui-wrapper">
+                                <div class="ui-itens">{cards_screen_decor}</div>
+                                <div class="ui-itens">{cards_screen_outputs}</div>
+                            </div>')
+
+# Marks the text as HTML
+htmltools::HTML(cards_screen)
+htmltools::HTML(cards_tips_creator)
+
+```
+
+```{r}
+
+# Lists all possible series codes
+all_series <- glue::glue("{unique_series$value}X")
+all_series <- glue::glue_collapse(all_series, "")
+
+# Listens for changes in #control-panel-inputs.
+# Updates the list of non-checked checkboxes.
+# Shows all cards and then only hides cards associated with the non-checked
+checks <- glue::glue('
+                     <script>
+                     $(document).ready(function(){
+                        $("#control-panel-inputs").change(function(){
+                          
+                          var typetitle = $(\'input[type="text"]\')
+                            .val()
+                            .toLowerCase()
+                            .replace(/[^\\w\\s]|_/g, "")
+                            .replace(/\\s+/g, " ");
+                          
+                          var noncheck = $( ".form-check-input:not(:checked)" )
+                            .map(function() {
+                              return this.value;
+                            })
+                            .get()
+                            .join(",.");
+                          
+                          const all = "@{all_series}@";
+                          var selected = $( ".item" )
+                            .map(function() {
+                              return $(this).attr("data-value");
+                            })
+                            .get()
+                            .join("X|");
+                          if (selected.length > 0) {
+                            var selected = selected + "X";
+                          }
+                            
+                          const regex1 = new RegExp(selected, "g");
+                          var nonselected = all.replaceAll(regex1, "");
+                          
+                          const regex2 = new RegExp("X$", "g");
+                          var nonselected = nonselected.replace(regex2, "");
+                          var nonselected = nonselected.replaceAll("X", ",");
+                          var nonselected = nonselected.replaceAll("series", ".series");
+                          
+                          if (typetitle.length > 0) {
+                            var typetitle = ".card-item[title*=\'" + typetitle + "\']";
+                            $(".card-item").hide();
+                            $(typetitle).show();
+                          } else {
+                            $(".card-item").show();
+                          }
+                          
+                          if (noncheck.length > 0) {
+                            var noncheck = "." + noncheck;
+                            $(noncheck).hide();
+                          }
+                          
+                          $(nonselected).hide();
+                          
+                        });
+                     });
+                     </script>
+                     ', .open = "@{", .close = "}@")
+
+htmltools::HTML(checks)
+
+```
+
+
+
+<!-- Connects to the Bootstrap package (includes Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
