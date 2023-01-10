@@ -30,7 +30,7 @@ main {
   margin: 0;
 }
 
-/* Guarantees that the decor () and interface () elements
+/* Guarantees that the decor and interface elements
 will share dimension with their pair and overlap */
 .ui-wrapper {
   display: grid;
@@ -38,7 +38,7 @@ will share dimension with their pair and overlap */
   grid-template-rows: 1fr;
 }
 
-.ui-itens {
+.ui-items {
   grid-column: 1;
   grid-row: 1;
 }
@@ -75,15 +75,19 @@ input {
 /* Customizes the page title */
 #title-page {
   font-family: StarNext;
-  font-size: 9vw;
+  font-size: max(9vw, 55px);
   padding-right: 30px;
 }
 
-/* Customizes the page subtitle */
+/* Customizes the page subtitle and the instructions within it */
 #subtitle-page {
   font-family: Khan;
   font-size: 18px;
   padding-right: 30px;
+}
+
+#instructions {
+  font-size: 24px;
 }
 
 /* Customizes the labels of the input sections */
@@ -119,6 +123,19 @@ input {
 
 .thumb {
   width: 100%;
+}
+
+/* Places an hover animation and mouse-pointer on the thumbnails */
+.card-item img {
+  border: transparent 5px solid;
+  border-radius: 30px;
+  transition-duration: 0.4s;
+  cursor: pointer;
+}
+
+.card-item img:hover {
+  border: #FF9900 3px solid;
+  border-radius: 30px;
 }
 
 /* Customizes the tooltips */
@@ -170,16 +187,4 @@ input {
 
 .tip-year {
   color: #FF9900;
-}
-
-.card-item img {
-  border: transparent 5px solid;
-  border-radius: 30px;
-  transition-duration: 0.4s;
-  cursor: pointer;
-}
-
-.card-item img:hover {
-  border: #FF9900 3px solid;
-  border-radius: 30px;
 }
