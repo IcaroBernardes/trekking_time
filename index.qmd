@@ -277,7 +277,7 @@ cards_itens <- cards_itens %>%
     
     glue::glue('
                <div class="card-item {era_value} {format_value} {setting_value} {series_value}" title=\'{title}\'>
-                  <a href="{url}">
+                  <a href="#{url}">
                     <img id="{id}" src="{thumb}" alt="..." class="thumb">
                   </a>
                </div>
@@ -369,6 +369,25 @@ checks <- glue::glue('
                      ', .open = "@{", .close = "}@")
 
 htmltools::HTML(checks)
+
+
+teste <- glue::glue('
+                     <script>
+                     $(document).ready(function(){
+                    
+                    var comment = document.getElementsByClassName("card-item");
+                    
+                    for (var i = 0 ; i < comment.length; i++) {
+   comment[i].addEventListener("touchstart", (e) => {
+   if (e.touches.length > 1) {
+      alert("You tapped me Twice !!!");
+   }
+ }, false);
+                    }
+                     });
+                     </script>
+                     ', .open = "@{", .close = "}@")
+htmltools::HTML(teste)
 
 ```
 
