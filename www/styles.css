@@ -113,8 +113,8 @@ input {
 
 /* Customizes the cards dimensions */
 .card-item {
-  width: 100px;
-  padding: 20px;
+  width: 70px;
+  padding: 10px;
 }
 
 .thumb {

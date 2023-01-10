@@ -52,8 +52,8 @@ titles_img <- readRDS("data/titles_img.RDS")
 
 # Adds the path to the thumbnails and full images
 titles_img <- titles_img %>% 
-  dplyr::mutate(thumb = glue::glue("www/cropped/{img}"),
-                img = glue::glue("www/images/{img}"))
+  dplyr::mutate(thumb = glue::glue("www/cropped/{img_id}"),
+                img = glue::glue("www/images/{img_id}"))
 
 # Gets the color palette
 palette <- trekcolors::lcars_pal("2369")
@@ -240,7 +240,6 @@ cards_itens <- timeline %>%
                 format_value = glue::glue('format{format_value}'),
                 setting_value = glue::glue('setting{setting_value}'),
                 series_value = glue::glue('series{series_value}')) %>% 
-  slice(c(1:50,100,1000,2000,2100,2120)) %>% 
   dplyr::mutate(id = glue::glue("card{1:n()}"))
 
 cards_tips_creator <- cards_itens %>% 

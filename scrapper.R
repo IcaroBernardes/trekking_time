@@ -11,6 +11,7 @@ library(rtrek)
 library(rvest)
 library(stringi)
 library(stringr)
+library(utils)
 library(xml2)
 
 ## Downloads the data
@@ -23,14 +24,14 @@ pGET <- polite::politely(httr::GET)
 # 2. Scrapping image names and articles urls ##############
 ## Gets unique names of the novels and translates them
 ## to the general style of url found in Memory Alpha
-unique_titles <- tlBooks %>% 
+titles_img <- tlBooks %>% 
   dplyr::distinct(title) %>% 
   dplyr::mutate(url = stringr::str_replace_all(title, " ", "_"),
                 url = stringi::stri_trans_general(url, "latin-ascii"),
                 url = glue::glue("https://memory-alpha.fandom.com/wiki/{url}"))
 
 ## Tries to get the url of the images for each novel
-unique_titles <- unique_titles %>% 
+titles_img <- titles_img %>% 
   dplyr::mutate(img = purrr::imap_chr(url, function(url, i) {
     
     print(glue::glue("scrapping title #{i}..."))
@@ -59,48 +60,54 @@ unique_titles <- unique_titles %>%
   }))
 
 ## Keeps only the url of articles on which the scrap was successful
-unique_titles <- unique_titles %>% 
+titles_img <- titles_img %>% 
   dplyr::mutate(url = ifelse(is.na(img), NA, url))
 
 ## Extracts the image name from the 'src'
-unique_titles <- unique_titles %>% 
+titles_img <- titles_img %>% 
   dplyr::mutate(img = stringr::str_remove(img, "(?<=(jpg|png)).+"),
                 img = stringr::str_split_i(img, "/", -1))
 
 ## Saves the data
-saveRDS(unique_titles, "data/titles_img.RDS")
+saveRDS(titles_img, "data/titles_img.RDS")
 
 # 3. Downloading images ##############
-## Lists the names of images of the articles that were found
-article_found <- unique_titles %>% 
-  dplyr::filter(!is.na(img)) %>% 
-  dplyr::pull(img)
+## Reads the data
+titles_img <- readRDS("data/titles_img.RDS")
+
+## Gives an id to the images with the file extension
+titles_img <- titles_img %>% 
+  dplyr::mutate(ext = stringr::str_extract(img, "(\\.jpg|\\.png)"),
+                img_id = glue::glue("image{1:n()}{ext}")) %>% 
+  dplyr::select(-ext)
+
+## Replaces absent images with a placeholder
+titles_img <- titles_img %>% 
+  dplyr::mutate(img_id = ifelse(is.na(img), "placeholder.png", img_id))
 
 ## Download the images from Memory Alpha with the aid of rtrek::ma_image()
-article_found %>% 
-  purrr::iwalk(function (x, y) {
+titles_img %>% 
+  dplyr::select(img, img_id) %>% 
+  purrr::pwalk(function (img, img_id) {
     
-    print(glue::glue("downloading image #{y}..."))
+    print(glue::glue("downloading {img_id}..."))
     
+    ### Wraps the download function inside try() to by-pass errors
     try({
-      rtrek::ma_image(glue::glue("File:{x}"),
-                      file = glue::glue("www/images/{x}"),
+      rtrek::ma_image(glue::glue("File:{img}"),
+                      file = glue::glue("www/images/{img_id}"),
                       keep = TRUE)
     })
     
   })
 
-## Identifies failed downloads and articles not found
-## and gives them a placeholder image
-no_image <- article_found[!(article_found %in% list.files("www/images"))]
-no_image <- unique_titles %>%
-  dplyr::filter(is.na(img) | img %in% no_image) %>% 
-  dplyr::pull(title)
-unique_titles <- unique_titles %>% 
-  dplyr::mutate(img = ifelse(title %in% no_image, "placeholder.png", img))
+## Identifies failed downloads and replaces the images with a placeholder 
+success <- list.files("www/images") 
+titles_img <- titles_img %>% 
+  dplyr::mutate(img_id = ifelse(img_id %in% success, img_id, "placeholder.png"))
 
 ## Saves the data
-saveRDS(unique_titles, "data/titles_img.RDS")
+saveRDS(titles_img, "data/titles_img.RDS")
 
 # 4. Handling the data ##############
 ## Applies the categorization of Memory Beta to the years
