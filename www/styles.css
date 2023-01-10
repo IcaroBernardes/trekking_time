@@ -19,6 +19,13 @@
         url('Federation.ttf')  format('truetype'); /* Safari, Android, iOS */
 }
 
+/* Makes the 'Font Awesome 6 -  Brands' font available */
+@font-face {
+  font-family: 'FA6brands';
+  src:  url('FA6brands.woff') format('woff'), /* Modern Browsers */
+        url('FA6brands.ttf')  format('truetype'); /* Safari, Android, iOS */
+}
+
 /* Define the page font and applies a black background to the whole page */
 body {
   background-color: black;
@@ -79,15 +86,20 @@ input {
   padding-right: 30px;
 }
 
-/* Customizes the page subtitle and the instructions within it */
+/* Customizes the page subtitle as well as
+the instructions and acknowledgements within it */
 #subtitle-page {
   font-family: Khan;
   font-size: 18px;
   padding-right: 30px;
 }
 
-#instructions {
+#subtitle-focus {
   font-size: 24px;
+}
+
+.acknow {
+  font-family: FA6brands;
 }
 
 /* Customizes the labels of the input sections */
