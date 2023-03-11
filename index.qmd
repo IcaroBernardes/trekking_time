@@ -58,8 +58,6 @@ titles_img <- titles_img %>%
 # Gets the color palette
 palette <- trekcolors::lcars_pal("2369")
 
-#C:/Users/Icaro Bernardes/AppData/Local/R/win-library/4.2/trekfont/fonts
-
 ```
 
 ```{r inputs}
